@@ -5,14 +5,9 @@ import uuid
 import threading
 import webbrowser
 
-from flask import Flask, jsonify, render_template, request, send_file
-from flask import Flask, render_template, request, send_file, session, redirect, url_for, jsonify
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
+from werkzeug.utils import secure_filename
 from docx.opc.exceptions import PackageNotFoundError
-from werkzeug.utils import secure_filename
-
-from flask import Flask, render_template, request, send_file
-from werkzeug.utils import secure_filename
 
 from analyzer.pdf_reader import extract_pdf_text
 from analyzer.docx_reader import DocxReadError, check_docx_file
@@ -33,6 +28,7 @@ from analyzer.validator import (
     validate_report_download,
     validate_resume_upload,
     wants_json_response,
+)
 from analyzer.duplicate_detector import detect_duplicates
 from analyzer.skill_gap_analyzer import analyze_skill_gap, get_supported_roles
 from analyzer.roadmap_generator import generate_roadmap, calculate_roadmap_progress
@@ -76,28 +72,6 @@ def analyze():
         return error_resp
 
     file_type = extension[1:].upper()
-    filename = secure_filename(file.filename)
-    unique_filename = f"{uuid.uuid4().hex}_{filename}"
-    file = request.files["resume"]
-
-    if not file.filename:
-        return "No file selected."
-
-    original_filename = file.filename
-    extension = os.path.splitext(original_filename.lower())[1]
-    extension = os.path.splitext(original_filename)[1].lower()
-
-    if extension not in ALLOWED_EXTENSIONS:
-        return "Only PDF and DOCX files are allowed."
-
-    # Used in messages shown to the user: "PDF" or "DOCX"
-    file_type = extension[1:].upper()
-
-    filename = secure_filename(original_filename)
-
-    if not filename:
-        return "Invalid filename."
-
     unique_filename = generate_secure_filename(extension)
 
     filepath = os.path.join(
@@ -106,7 +80,6 @@ def analyze():
     )
 
     try:
-        # Save the uploaded resume
         # Save the uploaded resume.
         file.save(filepath)
 
@@ -122,7 +95,6 @@ def analyze():
                 request=request,
                 legacy_200_for_html=True,
             )
-            return f"No readable text found in this {file_type}."
 
         # Detect and organize sections
         resume_sections = extract_sections(resume_text)
@@ -270,9 +242,6 @@ def analyze():
             request=request,
             legacy_200_for_html=True,
         )
-        return str(error)
-        # A file named .docx that is not a real Word document
-        return "This file is not a valid DOCX document."
 
     except Exception as error:
         print("Analysis Error:", error)
